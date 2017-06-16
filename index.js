@@ -6,6 +6,8 @@ const webshot = require("webshot");
 const tempfile = require("tempfile");
 const fs = require("fs");
 const request = require("request");
+var env = require('node-env-file');
+env(__dirname + '/.env');
 
 // This configuration can gets overwritten when process.env.SLACK_MESSAGE_EVENTS is given.
 const DEFAULT_SLACK_MESSAGE_EVENTS = "direct_message,direct_mention,mention";
