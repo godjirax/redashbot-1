@@ -2,6 +2,7 @@
 
 const Botkit = require("botkit");
 const webshot = require("webshot");
+// const request = require("request");
 const tempfile = require("tempfile");
 const fs = require("fs");
 const request = require("request");
@@ -19,6 +20,28 @@ if (!((process.env.REDASH_HOST && process.env.REDASH_API_KEY) || (process.env.RE
   console.error("REDASH_HOSTS_AND_API_KEYS=\"http://redash1.example.com;TOKEN1,http://redash2.example.com;TOKEN2\"");
   process.exit(1);
 }
+
+
+
+
+// var options = {
+//   // streamType: "jpeg",
+//   // "renderDelay" : 20000,
+//     // phantomPath: "C:\\Users\\sdkca\\Desktop\\phantomjs-2.1.1-windows\\bin\\phantomjs.exe"
+// };
+// console.log('go go go')
+// // Use webshot here with the options object as third parameter
+// // Example :
+// webshot('http://52.213.226.220/embed/query/3/visualization/7?api_key=PQ7Umy8PFljvYoJq9YezD8hJ1XMVUt8IoWJ2AVAY',
+// 'ICICICICI.png', options, (err) => {
+//   console.log('SAVED SAVED')
+//     // screenshot now saved to google.png
+// });
+//
+
+
+
+
 
 const parseApiKeysPerHost = () => {
   if (process.env.REDASH_HOST) {
@@ -44,17 +67,41 @@ const redashApiKeysPerHost = parseApiKeysPerHost();
 const slackBotToken = process.env.SLACK_BOT_TOKEN;
 const slackMessageEvents = process.env.SLACK_MESSAGE_EVENTS || DEFAULT_SLACK_MESSAGE_EVENTS;
 
+
+
+console.log('redashApiKeysPerHost');
+console.log(redashApiKeysPerHost);
+
+
 const controller = Botkit.slackbot({
-  debug: !!process.env.DEBUG
+  debug: false
 });
 
 controller.spawn({
   token: slackBotToken
 }).startRTM();
 
+
+
+
+controller.hears('hello',['direct_message','direct_mention','mention'],function(bot,message) {
+  bot.reply(message,'Hello yourself.');
+});
+
+
+console.log('slackMessageEvents')
+console.log(slackMessageEvents)
+
+
+
 Object.keys(redashApiKeysPerHost).forEach((redashHost) => {
+
+
+  console.log(`${redashHost}/queries/`)
+
   const redashHostAlias = redashApiKeysPerHost[redashHost]["alias"];
   const redashApiKey    = redashApiKeysPerHost[redashHost]["key"];
+
   controller.hears(`${redashHost}/queries/([0-9]+)#([0-9]+)`, slackMessageEvents, (bot, message) => {
     const originalUrl = message.match[0];
     const queryId = message.match[1];
@@ -66,52 +113,119 @@ Object.keys(redashApiKeysPerHost).forEach((redashHost) => {
     bot.botkit.log(queryUrl);
     bot.botkit.log(embedUrl);
 
+console.log('queryUrl' + queryUrl)
+
+
     const outputFile = tempfile(".png");
-    const webshotOptions = {
-      screenSize: {
-        width: 720,
-        height: 360
-      },
-      shotSize: {
-        width: 720,
-        height: "all"
-      },
-      renderDelay: 2000,
-      timeout: 100000
-    };
+    // const webshotOptions = {
+    //   screenSize: {
+    //     width: 720,
+    //     height: 360
+    //   },
+    //   shotSize: {
+    //     width: 720,
+    //     height: "all"
+    //   },
+    //   renderDelay: 20000,
+    //   timeout: 100000
+    // };
+    //
+    // console.log('embedUrl')
+    // console.log(embedUrl)
 
-    webshot(embedUrl, outputFile, webshotOptions, (err) => {
-      if (err) {
-        const msg = `Something wrong happend in take a screen capture : ${err}`;
-        bot.reply(message, msg);
-        return bot.botkit.log.error(msg);
-      }
 
-      bot.botkit.log.debug(outputFile);
-      bot.botkit.log.debug(Object.keys(message));
-      bot.botkit.log(message.user + ":" + message.type + ":" + message.channel + ":" + message.text);
+//
+//
+//     request(embedUrl, function (error, response, body) {
+//   console.log('error:', error); // Print the error if one occurred
+//   console.log('statusCode:', response && response.statusCode); // Print the response status code if a response was received
+//   console.log('body:', body); // Print the HTML for the Google homepage.
+// });
+//
 
-      const options = {
-        token: slackBotToken,
-        filename: `query-${queryId}-visualization-${visualizationId}.png`,
-        file: fs.createReadStream(outputFile),
-        channels: message.channel
-      };
+var Nightmare = require('nightmare');
 
-      // bot.api.file.upload cannot upload binary file correctly, so directly call Slack API.
-      request.post({ url: "https://api.slack.com/api/files.upload", formData: options }, (err, resp, body) => {
-        if (err) {
-          const msg = `Something wrong happend in file upload : ${err}`;
-          bot.reply(message, msg);
-          bot.botkit.log.error(msg);
-        } else if (resp.statusCode == 200) {
-          bot.botkit.log("ok");
-        } else {
-          const msg = `Something wrong happend in file upload : status code=${resp.statusCode}`;
-          bot.reply(message, msg);
-          bot.botkit.log.error(msg);
-        }
-      });
-    });
+ Nightmare()
+ // .goto('http://52.213.226.220/embed/query/3/visualization/7?api_key=PQ7Umy8PFljvYoJq9YezD8hJ1XMVUt8IoWJ2AVAY')
+ .goto(embedUrl)
+ // .wait('.modebar-btn')
+ .wait(10000)
+ .screenshot(outputFile)
+ .end()
+ .then(function(){
+   console.log("Screenshot Saved")
+
+
+   console.log('message gound')
+   console.log(outputFile)
+
+
+   bot.botkit.log.debug(outputFile);
+   bot.botkit.log.debug(Object.keys(message));
+   bot.botkit.log(message.user + ":" + message.type + ":" + message.channel + ":" + message.text);
+
+   const options = {
+     token: slackBotToken,
+     filename: `query-${queryId}-visualization-${visualizationId}.png`,
+     file: fs.createReadStream(outputFile),
+     channels: message.channel
+   };
+
+   // bot.api.file.upload cannot upload binary file correctly, so directly call Slack API.
+   request.post({ url: "https://api.slack.com/api/files.upload", formData: options }, (err, resp, body) => {
+     if (err) {
+       const msg = `Something wrong happend in file upload : ${err}`;
+       bot.reply(message, msg);
+       bot.botkit.log.error(msg);
+     } else if (resp.statusCode == 200) {
+       bot.botkit.log("ok");
+     } else {
+       const msg = `Something wrong happend in file upload : status code=${resp.statusCode}`;
+       bot.reply(message, msg);
+       bot.botkit.log.error(msg);
+     }
+   });
+
+
+ })
+
+
+    // webshot(embedUrl, outputFile, webshotOptions, (err) => {
+    //   if (err) {
+    //     const msg = `Something wrong happend in take a screen capture : ${err}`;
+    //     bot.reply(message, msg);
+    //     return bot.botkit.log.error(msg);
+    //   }
+    //
+    //   console.log('message gound')
+    //   console.log(outputFile)
+    //
+    //
+    //   bot.botkit.log.debug(outputFile);
+    //   bot.botkit.log.debug(Object.keys(message));
+    //   bot.botkit.log(message.user + ":" + message.type + ":" + message.channel + ":" + message.text);
+    //
+    //   const options = {
+    //     token: slackBotToken,
+    //     filename: `query-${queryId}-visualization-${visualizationId}.png`,
+    //     file: fs.createReadStream(outputFile),
+    //     channels: message.channel
+    //   };
+    //
+    //   // bot.api.file.upload cannot upload binary file correctly, so directly call Slack API.
+    //   request.post({ url: "https://api.slack.com/api/files.upload", formData: options }, (err, resp, body) => {
+    //     if (err) {
+    //       const msg = `Something wrong happend in file upload : ${err}`;
+    //       bot.reply(message, msg);
+    //       bot.botkit.log.error(msg);
+    //     } else if (resp.statusCode == 200) {
+    //       bot.botkit.log("ok");
+    //     } else {
+    //       const msg = `Something wrong happend in file upload : status code=${resp.statusCode}`;
+    //       bot.reply(message, msg);
+    //       bot.botkit.log.error(msg);
+    //     }
+    //   });
+    // });
   });
 });
