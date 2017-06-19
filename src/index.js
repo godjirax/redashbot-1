@@ -222,7 +222,7 @@ function updateAvailableCharts(redashHostAlias, redashApiKey, cb) {
       if ( !queries.results ) {
         msg = "No queries";
       } else {
-        msg = "You can choice between:\n";
+        msg = "You can choose between:\n";
         graphs = {};
 
         for ( var i = 0 ; i < queries.results.length ; i++ ) {
