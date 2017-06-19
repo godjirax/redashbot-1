@@ -78,7 +78,7 @@ Object.keys(redashApiKeysPerHost).forEach((redashHost) => {
 
   // Listen "list": list all available charts.
   controller.hears('list',['direct_message','direct_mention','mention'],function(bot,message) {
-      var msg = "You can choice between:\n";
+      var msg = "You can choose between:\n";
       var key;
 
       for ( key in graphs ) {
