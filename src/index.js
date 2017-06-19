@@ -97,7 +97,7 @@ Object.keys(redashApiKeysPerHost).forEach((redashHost) => {
       if ( err ) {
         bot.reply(message, err);
       } else {
-        showGraph(redashHostAlias, redashApiKey, bot, message, graphs[queryName], visualisation);
+        showGraph(redashHostAlias, redashApiKey, redashHost, bot, message, graphs[queryName], visualisation);
       }
     });
   });
@@ -106,7 +106,7 @@ Object.keys(redashApiKeysPerHost).forEach((redashHost) => {
   controller.hears(`${redashHost}/queries/([0-9]+)#([0-9]+)`, slackMessageEvents, (bot, message) => {
     const queryId = message.match[1];
     const visualizationId =  message.match[2];
-    showGraph(redashHostAlias, redashApiKey, bot, message, queryId, visualizationId);
+    showGraph(redashHostAlias, redashApiKey, redashHost, bot, message, queryId, visualizationId);
   });
 });
 
@@ -119,12 +119,10 @@ Object.keys(redashApiKeysPerHost).forEach((redashHost) => {
  * @param  {[type]} queryId
  * @param  {[type]} visualizationId
  */
-function showGraph(redashHostAlias, redashApiKey, bot, message, queryId, visualizationId) {
-  const queryUrl = `${redashHostAlias}/queries/${queryId}#${visualizationId}`;
-  const embedUrl = `${redashHostAlias}/embed/query/${redashHost}/visualization/${visualizationId}?api_key=${redashApiKey}`;
+function showGraph(redashHostAlias, redashApiKey, redashHost, bot, message, queryId, visualizationId) {
+  const embedUrl = `${redashHostAlias}/embed/query/${queryId}/visualization/${visualizationId}?api_key=${redashApiKey}`;
 
   bot.reply(message, `Taking screenshot...`);
-  bot.botkit.log(queryUrl);
   bot.botkit.log(embedUrl);
 
   const outputFile = tempfile(".png");
