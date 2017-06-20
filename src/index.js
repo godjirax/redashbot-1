@@ -91,7 +91,7 @@ Object.keys(redashApiKeysPerHost).forEach((redashHost) => {
 
   // Listen "show" + chart name: display chart by name.
   controller.hears(`show ([-_ a-zA-Z0-9]+)`, slackMessageEvents, (bot, message) => {
-    const queryName = message.match[1];
+    const queryName = _.trim(message.match[1]);
 
     getVisualizationIdByChartName(redashHostAlias, redashApiKey, queryName, (err, visualisation) => {
       if ( err ) {
@@ -129,7 +129,7 @@ function showGraph(redashHostAlias, redashApiKey, redashHost, bot, message, quer
 
   new Nightmare()
     .goto(embedUrl)
-    .wait('.modebar-btn')
+    .wait('.modebar-btn, .ng-isolate-scope')
     .use(screenshotSelector(outputFile, '.tile.m-10', function(){
      console.log("Screenshot Saved to "+ outputFile)
 
@@ -188,12 +188,14 @@ function getVisualizationIdByChartName(redashHostAlias, redashApiKey, name, cb) 
           cb(`No visualisations for graph id ${id}`)
         }
       } else {
-        var vis = _.find(query.visualizations, function(o) { return o.type == 'CHART'; });
+        var vis = _.find(query.visualizations, function(o) {
+          return o.type == 'CHART' || o.type == 'COUNTER';
+        });
 
         if ( vis ) {
           cb(null, vis.id);
         } else {
-          cb(`No visualisation with type "CHART" for graph id ${id}`);
+          cb(`No visualisation with type "CHART" or "COUNTER" for graph id ${id}`);
         }
       }
     });
@@ -225,15 +227,17 @@ function updateAvailableCharts(redashHostAlias, redashApiKey, cb) {
         msg = "You can choose between:\n";
         graphs = {};
 
-        for ( var i = 0 ; i < queries.results.length ; i++ ) {
-           msg += "- "+queries.results[i].name+"\n";
-           graphs[queries.results[i].name] = queries.results[i].id;
+        var results = _.sortBy(queries.results, [function(o) { return o.name; }]);
+
+        for ( var i = 0 ; i < results.length ; i++ ) {
+           msg += "- "+results[i].name+"\n";
+           graphs[results[i].name] = results[i].id;
         }
 
-        msg += '\nSay me "show" + graph name. e.g: "show '+queries.results[0].name+'"';
+        msg += '\nSay me "show" + graph name. e.g: "show '+results[0].name+'"';
       }
 
-      console.log(`Charts list updated! (${queries.results.length} charts)`);
+      console.log(`Charts list updated! (${results.length} charts)`);
     }
 
     if ( cb ) {
